@@ -7,20 +7,37 @@ import androidx.fragment.app.FragmentActivity;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.lab_pennapar_c0874203_android.databinding.ActivityMapsBinding;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Locale;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -31,7 +48,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
 
-    //Logic
+    //local logic
     private Boolean isFirstTime = true;
 
     @Override
@@ -45,6 +62,68 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        // Search Part
+        if (!Places.isInitialized()) {
+            Places.initialize(this, getString(R.string.google_api_key));
+        }
+
+        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
+                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
+        autocompleteFragment.getView().setBackgroundColor(Color.WHITE);
+        autocompleteFragment.setPlaceFields(Arrays.asList(
+                Place.Field.ID,
+                Place.Field.NAME,
+                Place.Field.ADDRESS,
+                Place.Field.LAT_LNG));
+
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                // TODO: Get info about the selected place.
+                Log.i("0", "Place: " + place.getName() + ", " + place.getId());
+                try {
+                    setMarker(place.getLatLng());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onError(Status status) {
+                // TODO: Handle the error.
+                Log.i("0", "An error occurred: " + status);
+            }
+        });
+
+        // adding on click listener for our hybrid map button.
+        binding.idBtnHybridMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // below line is to change
+                // the type of map to hybrid.
+                mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+            }
+        });
+
+        // adding on click listener for our terrain map button.
+        binding.idBtnTerrainMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // below line is to change
+                // the type of terrain map.
+                mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+            }
+        });
+        // adding on click listener for our satellite map button.
+        binding.idBtnSatelliteMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // below line is to change the
+                // type of satellite map.
+                mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+            }
+        });
     }
 
     @Override
@@ -79,6 +158,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(true);
+
+        // apply long press gesture
+        mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(@NonNull LatLng latLng) {
+                try {
+                    setMarker(latLng);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    private void setMarker(LatLng latLng) throws IOException {
+        mMap.clear();
+        MarkerOptions options = new MarkerOptions()
+                .position(latLng)
+                .title(getAddress(latLng));
+        Marker marker = mMap.addMarker(options);
+        assert marker != null;
+        marker.showInfoWindow();
+        zoomCamera(latLng);
     }
 
     private void setHomeMarker(Location location) {
@@ -93,6 +195,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void zoomCamera(LatLng latLng) {
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
+    }
+
+    private String getAddress(LatLng latLng) throws IOException {
+        Geocoder geocoder;
+        List<Address> addresses;
+        geocoder = new Geocoder(this, Locale.getDefault());
+
+        addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
+        String address = addresses.get(0).getAddressLine(0);
+
+        if (address.isEmpty() || address == null){
+            address = Calendar.getInstance().getTime().toString();
+        }
+
+        return address;
     }
 
     private void startUpdateLocation() {
