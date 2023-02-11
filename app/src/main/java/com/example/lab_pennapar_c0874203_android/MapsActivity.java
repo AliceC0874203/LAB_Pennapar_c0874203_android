@@ -62,7 +62,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Boolean isFirstTime = true;
     Marker homeLocation;
     Marker favoriteLocation;
-    private List<Marker> favoriteLocationList;
+    List<FavoritePlace> favoritePlaces;
 
     //Shared preferences
     SharedPreferences sharedPreferences;
@@ -74,7 +74,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        favoriteLocationList = new ArrayList<Marker>();
+        favoritePlaces = new ArrayList<>();
 
         // instantiate shared preferences
         sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
@@ -329,10 +329,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    private void getSavedFavoriteLocations() {
+        String receivedSerializedString = sharedPreferences.getString(KEY_NAME, null);
+        try {
+            favoritePlaces = (ArrayList<FavoritePlace>) ObjectSerializer.deserialize(receivedSerializedString);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void saveFavoritePlaceToList() throws IOException {
         if (favoriteLocation != null) {
+            getSavedFavoriteLocations();
             FavoritePlace fav = new FavoritePlace(favoriteLocation.getTitle(), favoriteLocation.getPosition().latitude, favoriteLocation.getPosition().longitude);
-            List<FavoritePlace> favoritePlaces = new ArrayList<>();
             favoritePlaces.add(fav);
             sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
             SharedPreferences.Editor editor = sharedPreferences.edit();
