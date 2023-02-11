@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 
 import com.example.lab_pennapar_c0874203_android.databinding.ActivityMainBinding;
@@ -44,6 +45,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 startActivity(new Intent(MainActivity.this, MapsActivity.class));
+            }
+        });
+
+        binding.listItem.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent i = new Intent(MainActivity.this, MapsActivity.class);
+                i.putExtra("favoritePlaceSelected",favoritePlaceList.get(position));
+                startActivity(i);
             }
         });
     }

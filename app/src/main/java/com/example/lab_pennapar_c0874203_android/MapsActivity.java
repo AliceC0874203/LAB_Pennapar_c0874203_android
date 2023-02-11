@@ -62,6 +62,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Boolean isFirstTime = true;
     Marker homeLocation;
     Marker favoriteLocation;
+    FavoritePlace selectedFavoritePlace;
     List<FavoritePlace> favoritePlaces;
 
     //Shared preferences
@@ -234,6 +235,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onMarkerDragStart(@NonNull Marker marker) {}
         });
+
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            selectedFavoritePlace = (FavoritePlace) extras.getSerializable("favoritePlaceSelected");
+            try {
+                if (selectedFavoritePlace != null) {
+                    isFirstTime = false;
+                    setMarker(new LatLng(selectedFavoritePlace.getLat(),selectedFavoritePlace.getLng()));
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void setMarker(LatLng latLng) throws IOException {
