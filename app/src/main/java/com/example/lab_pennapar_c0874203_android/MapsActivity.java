@@ -1,11 +1,15 @@
 package com.example.lab_pennapar_c0874203_android;
 
+import static com.example.lab_pennapar_c0874203_android.FavoritePlace.KEY_NAME;
+import static com.example.lab_pennapar_c0874203_android.FavoritePlace.SHARED_PREFERENCES_NAME;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Address;
@@ -34,9 +38,12 @@ import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.gson.Gson;
 import com.google.maps.android.SphericalUtil;
 
 import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -54,7 +61,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //local logic
     private Boolean isFirstTime = true;
     Marker homeLocation;
-    Marker favriteLocation;
+    Marker favoriteLocation;
+    private List<Marker> favoriteLocationList;
+
+    //Shared preferences
+    SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +73,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        favoriteLocationList = new ArrayList<Marker>();
+
+        // instantiate shared preferences
+        sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -141,7 +157,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding.idBtnDistance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (favriteLocation != null) {
+                if (favoriteLocation != null) {
                     drawLine();
                 }
             }
@@ -229,7 +245,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Marker marker = mMap.addMarker(options);
         assert marker != null;
         marker.showInfoWindow();
-        favriteLocation = marker;
+        favoriteLocation = marker;
         zoomCamera(latLng);
     }
 
@@ -267,14 +283,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .clickable(true)
                 .color(Color.RED)
                 .width(10)
-                .add(favriteLocation.getPosition(), homeLocation.getPosition());
+                .add(favoriteLocation.getPosition(), homeLocation.getPosition());
         mMap.addPolyline(options);
-        zoomCamera(favriteLocation.getPosition());
+        zoomCamera(favoriteLocation.getPosition());
         showDistance();
     }
 
     private void showDistance() {
-        double distance = SphericalUtil.computeDistanceBetween(favriteLocation.getPosition(), homeLocation.getPosition());
+        double distance = SphericalUtil.computeDistanceBetween(favoriteLocation.getPosition(), homeLocation.getPosition());
         Toast.makeText(this, "Distance between positions is \n " + String.format("%.2f", distance / 1000) + "km", Toast.LENGTH_SHORT).show();
     }
 
@@ -300,6 +316,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, locationListener);
             }
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        try {
+            saveFavoritePlaceToList();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveFavoritePlaceToList() throws IOException {
+        if (favoriteLocation != null) {
+            FavoritePlace fav = new FavoritePlace(favoriteLocation.getTitle(), favoriteLocation.getPosition().latitude, favoriteLocation.getPosition().longitude);
+            List<FavoritePlace> favoritePlaces = new ArrayList<>();
+            favoritePlaces.add(fav);
+            sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putString(KEY_NAME, ObjectSerializer.serialize((Serializable) favoritePlaces));
+            editor.apply();
         }
     }
 }
