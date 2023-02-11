@@ -28,10 +28,13 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.lab_pennapar_c0874203_android.databinding.ActivityMapsBinding;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.maps.android.SphericalUtil;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -50,6 +53,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //local logic
     private Boolean isFirstTime = true;
+    Marker homeLocation;
+    Marker favriteLocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,7 +107,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View v) {
                 // below line is to change
                 // the type of map to hybrid.
-                mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                if (mMap != null) {
+                    mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                }
             }
         });
 
@@ -112,16 +119,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View v) {
                 // below line is to change
                 // the type of terrain map.
-                mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+                if (mMap != null) {
+                    mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+                }
             }
         });
+
         // adding on click listener for our satellite map button.
         binding.idBtnSatelliteMap.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 // below line is to change the
                 // type of satellite map.
-                mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+                if (mMap != null) {
+                    mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+                }
+            }
+        });
+
+        //Show distance on click
+        binding.idBtnDistance.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (favriteLocation != null) {
+                    drawLine();
+                }
             }
         });
     }
@@ -170,16 +192,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
+
+        //Polyline onclick
+        mMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener() {
+            @Override
+            public void onPolylineClick(@NonNull Polyline polyline) {
+                showDistance();
+            }
+        });
+
+        //On marker drag
+        mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
+            @Override
+            public void onMarkerDrag(@NonNull Marker marker) {}
+
+            @Override
+            public void onMarkerDragEnd(@NonNull Marker marker) {
+                try {
+                    setMarker(marker.getPosition());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onMarkerDragStart(@NonNull Marker marker) {}
+        });
     }
 
     private void setMarker(LatLng latLng) throws IOException {
         mMap.clear();
         MarkerOptions options = new MarkerOptions()
                 .position(latLng)
+                .draggable(true)
                 .title(getAddress(latLng));
         Marker marker = mMap.addMarker(options);
         assert marker != null;
         marker.showInfoWindow();
+        favriteLocation = marker;
         zoomCamera(latLng);
     }
 
@@ -189,7 +239,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .title("You are here")
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
                 .snippet("Your Location");
-        mMap.addMarker(options);
+        homeLocation = mMap.addMarker(options);
         zoomCamera(userLocation);
     }
 
@@ -210,6 +260,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         return address;
+    }
+
+    private void drawLine() {
+        PolylineOptions options = new PolylineOptions()
+                .clickable(true)
+                .color(Color.RED)
+                .width(10)
+                .add(favriteLocation.getPosition(), homeLocation.getPosition());
+        mMap.addPolyline(options);
+        zoomCamera(favriteLocation.getPosition());
+        showDistance();
+    }
+
+    private void showDistance() {
+        double distance = SphericalUtil.computeDistanceBetween(favriteLocation.getPosition(), homeLocation.getPosition());
+        Toast.makeText(this, "Distance between positions is \n " + String.format("%.2f", distance / 1000) + "km", Toast.LENGTH_SHORT).show();
     }
 
     private void startUpdateLocation() {
