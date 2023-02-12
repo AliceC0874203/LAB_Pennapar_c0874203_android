@@ -2,5 +2,5 @@
     <string name="app_name">LAB_Pennapar_c0874203_android</string>
     <string name="title_activity_maps">MapsActivity</string>
     <string name="title_activity_main">MainActivity</string>
-    <string name="google_api_key">AIzaSyDTgnHoeMQqyRC0FrPL7Hb30XOQUt4iKNs</string>
+    <string name="google_api_key"></string>
 </resources>
